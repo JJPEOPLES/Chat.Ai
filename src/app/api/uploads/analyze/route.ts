@@ -7,6 +7,7 @@ import {
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "local";

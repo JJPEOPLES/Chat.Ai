@@ -1,4 +1,3 @@
-import { PDFParse } from "pdf-parse";
 import type { Attachment } from "./types";
 import { env } from "./env";
 import { detectUploadKind } from "./upload-kind";
@@ -6,6 +5,8 @@ import { detectUploadKind } from "./upload-kind";
 export { detectUploadKind };
 
 export async function extractPdfText(base64: string) {
+  const pdfParseModuleName = "pdf-" + "parse";
+  const { PDFParse } = (await import(pdfParseModuleName)) as typeof import("pdf-parse");
   const buffer = Buffer.from(base64, "base64");
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();

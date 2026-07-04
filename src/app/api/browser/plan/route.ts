@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { generateBrowserPlan } from "@/lib/browser-agent";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "local";
   const { rateLimited } = checkRateLimit(`${ip}:browser-plan`);

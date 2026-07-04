@@ -1,7 +1,7 @@
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { z } from "zod";
 import { env } from "./env";
 import type { BrowserAction, BrowserPlan, BrowserRunResult, BrowserTarget } from "./types";
+import type { Browser, BrowserContext, Page } from "playwright";
 
 const browserTargetSchema = z.object({
   selector: z.string().optional(),
@@ -152,6 +152,8 @@ async function withBrowser<T>(callback: (args: {
   context: BrowserContext;
   page: Page;
 }) => Promise<T>) {
+  const playwrightModuleName = "play" + "wright";
+  const { chromium } = (await import(playwrightModuleName)) as typeof import("playwright");
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },

@@ -3,6 +3,8 @@ import { runBrowserPlan } from "@/lib/browser-agent";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { BrowserPlan } from "@/lib/types";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "local";
   const { rateLimited } = checkRateLimit(`${ip}:browser-run`);
