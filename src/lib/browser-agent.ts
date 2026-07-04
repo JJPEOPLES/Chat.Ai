@@ -152,12 +152,27 @@ async function withBrowser<T>(callback: (args: {
   context: BrowserContext;
   page: Page;
 }) => Promise<T>) {
-  const playwrightModuleName = "play" + "wright";
-  const { chromium } = (await import(playwrightModuleName)) as typeof import("playwright");
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-  });
+  let browser: Browser | null = null;
+  let context: BrowserContext | null = null;
+
+  try {
+    const playwrightModuleName = "play" + "wright";
+    const { chromium } = (await import(playwrightModuleName)) as typeof import("playwright");
+    browser = await chromium.launch({ headless: true });
+    context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown browser runtime error.";
+    if (/playwright|browsers\.json|MODULE_NOT_FOUND/i.test(message)) {
+      throw new Error(
+        "Browser automation is unavailable in this Netlify runtime. Use local development for browser actions or move browser execution to a dedicated worker."
+      );
+    }
+
+    throw error;
+  }
+
   const page = await context.newPage();
 
   try {
