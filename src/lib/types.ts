@@ -21,6 +21,9 @@ export type Message = {
   createdAt: string;
   toolName?: string;
   attachments?: Attachment[];
+  agentPlan?: BrowserPlan;
+  agentResult?: BrowserRunResult;
+  pendingApproval?: boolean;
 };
 
 export type Conversation = {

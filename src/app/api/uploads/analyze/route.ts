@@ -34,12 +34,13 @@ export async function POST(request: Request) {
 
     const kind = detectUploadKind(file.type);
     const buffer = Buffer.from(await file.arrayBuffer());
-    const base64 = buffer.toString("base64");
+    const fileBase64 = buffer.toString("base64");
+    const base64 = kind === "image" ? fileBase64 : null;
     let textContent: string | null = null;
     let transcript: string | null = null;
 
     if (kind === "pdf") {
-      textContent = await extractPdfText(base64);
+      textContent = await extractPdfText(fileBase64);
     }
 
     if (kind === "text") {

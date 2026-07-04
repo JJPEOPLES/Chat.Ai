@@ -27,7 +27,7 @@ import { ToolPanel } from "@/components/status/tool-panel";
 import { SettingsPanel } from "@/components/status/settings-panel";
 import { StatusPanel } from "@/components/status/status-panel";
 import { createStarterConversation } from "@/lib/conversation-sync";
-import type { Attachment, Conversation, Message } from "@/lib/types";
+import type { Attachment, BrowserPlan, BrowserRunResult, Conversation, Message } from "@/lib/types";
 
 type Tab = "chat" | "tools" | "settings" | "status";
 
@@ -171,12 +171,109 @@ export function ChatWorkspace() {
     );
   }
 
+  function sanitizeAttachmentsForStorage(attachments: Attachment[]) {
+    return attachments.map(({ previewUrl, ...attachment }) => ({
+      ...attachment,
+      previewUrl,
+    }));
+  }
+
+  function isBrowserAgentRequest(content: string) {
+    return (
+      /https?:\/\//i.test(content) &&
+      /\b(api key|browser|website|sites|provider|sign up|login|developer|dashboard|oauth|token|automation|open these|check these)\b/i.test(
+        content
+      )
+    );
+  }
+
+  function updateMessageById(messageId: string, updater: (message: Message) => Message) {
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === activeConversation.id
+          ? {
+              ...conversation,
+              updatedAt: new Date().toISOString(),
+              messages: conversation.messages.map((message) =>
+                message.id === messageId ? updater(message) : message
+              ),
+            }
+          : conversation
+      )
+    );
+  }
+
+  async function handleAgentFlow(content: string, attachments: Attachment[], userMessage: Message) {
+    const agentMessageId = crypto.randomUUID();
+    const agentPlaceholder: Message = {
+      id: agentMessageId,
+      role: "assistant",
+      toolName: "Browser Agent",
+      content: "I’m checking the websites and preparing the next best browser action sequence.",
+      createdAt: new Date().toISOString(),
+      pendingApproval: false,
+    };
+
+    updateMessages([...activeConversation.messages, userMessage, agentPlaceholder]);
+
+    const response = await fetch("/api/browser/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: content }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? "Unable to prepare browser actions.");
+    }
+
+    const plan = data.plan as BrowserPlan;
+    updateMessageById(agentMessageId, (message) => ({
+      ...message,
+      content:
+        `I inspected the request and prepared an approval-first browser workflow.\n\n` +
+        `Done: ${plan.websites[0] ?? "Browser task"}\n`,
+      agentPlan: plan,
+      pendingApproval: true,
+      attachments: sanitizeAttachmentsForStorage(attachments),
+    }));
+  }
+
+  async function approveAgentPlan(messageId: string) {
+    const message = activeConversation.messages.find((item) => item.id === messageId);
+    if (!message?.agentPlan) return;
+
+    updateMessageById(messageId, (current) => ({
+      ...current,
+      content: "Running the approved browser task now.",
+      pendingApproval: false,
+    }));
+
+    const response = await fetch("/api/browser/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved: true, plan: message.agentPlan }),
+    });
+    const data = (await response.json()) as BrowserRunResult | { error?: string };
+
+    updateMessageById(messageId, (current) => ({
+      ...current,
+      content:
+        response.ok
+          ? "The browser agent finished the approved task."
+          : `The browser agent could not finish the task: ${"error" in data ? (data.error ?? "Unknown error.") : "Unknown error."}`,
+      agentResult: response.ok ? (data as BrowserRunResult) : undefined,
+      pendingApproval: false,
+    }));
+  }
+
   async function handleSend(content: string, attachments: Attachment[]) {
+    const storedAttachments = sanitizeAttachmentsForStorage(attachments);
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content,
-      attachments,
+      attachments: storedAttachments,
       createdAt: new Date().toISOString(),
     };
 
@@ -187,7 +284,35 @@ export function ChatWorkspace() {
       createdAt: new Date().toISOString(),
     };
 
+    if (isBrowserAgentRequest(content)) {
+      try {
+        await handleAgentFlow(content, attachments, userMessage);
+      } catch (error) {
+        updateMessages([
+          ...activeConversation.messages,
+          userMessage,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            toolName: "Browser Agent",
+            content:
+              error instanceof Error ? `I hit an error: ${error.message}` : "I hit an unknown browser-agent error.",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+      return;
+    }
+
     const nextMessages = [...activeConversation.messages, userMessage, draftAssistant];
+    const requestMessages: Message[] = [
+      ...activeConversation.messages,
+      {
+        ...userMessage,
+        attachments,
+      },
+      draftAssistant,
+    ];
     updateMessages(nextMessages);
     setStreaming(true);
 
@@ -196,7 +321,7 @@ export function ChatWorkspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: nextMessages.filter((message) => message.content || message.role === "user"),
+          messages: requestMessages.filter((message) => message.content || message.role === "user"),
           attachments,
           useTools,
         }),
@@ -351,7 +476,11 @@ export function ChatWorkspace() {
               </div>
 
               <div className="conversation-shell flex min-h-0 flex-1 flex-col rounded-[30px]">
-                <MessageList messages={activeConversation.messages} streaming={streaming} />
+              <MessageList
+                messages={activeConversation.messages}
+                streaming={streaming}
+                onApproveAgent={approveAgentPlan}
+              />
               </div>
               <ChatComposer
                 onSend={handleSend}

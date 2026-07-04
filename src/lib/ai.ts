@@ -143,7 +143,12 @@ export async function streamChatCompletion({
   });
 
   if (!response.ok || !response.body) {
-    throw new Error(`AI request failed with ${response.status}.`);
+    const errorBody = await response.text().catch(() => "");
+    throw new Error(
+      errorBody
+        ? `AI request failed with ${response.status}: ${errorBody.slice(0, 300)}`
+        : `AI request failed with ${response.status}.`
+    );
   }
 
   const encoder = new TextEncoder();
