@@ -2,19 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bell,
   Bot,
   BrainCircuit,
-  ChevronDown,
-  Code2,
-  Crown,
-  Database,
   ImageIcon,
-  Mic,
   PenLine,
   Search,
-  Settings,
-  Sparkles,
   SquareCode,
   Box,
 } from "lucide-react";
@@ -103,17 +95,6 @@ export function ChatWorkspace() {
   function queuePrompt(prompt: string) {
     setComposerSeed(prompt);
     setTab("chat");
-  }
-
-  function clearMemory() {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("chat-ai-conversations");
-    }
-
-    const starter = createStarterConversation();
-    setConversations([starter]);
-    setActiveId(starter.id);
-    setComposerSeed("");
   }
 
   async function refreshSession() {
@@ -381,7 +362,7 @@ export function ChatWorkspace() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-1 gap-5 p-4 lg:grid-cols-[290px_minmax(0,1fr)]">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
       <AppSidebar
         activeId={activeId}
         conversations={conversations}
@@ -393,51 +374,30 @@ export function ChatWorkspace() {
         searchQuery={chatSearch}
       />
 
-      <main className="main-surface flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-[30px] px-6 py-5">
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
-          <div className="pt-1">
-            <h1 className="text-[3rem] font-semibold tracking-tight text-white">Good evening, Tera 👋</h1>
-            <p className="mt-2 text-2xl text-slate-300">What can I help you with today?</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setTab("settings")}
-              className="rounded-2xl border border-amber-400/30 bg-white/4 px-5 py-3 text-lg text-white shadow-[0_0_0_1px_rgba(251,191,36,0.06)]"
-            >
-              <span className="flex items-center gap-2">
-                <Crown className="size-5 text-amber-300" />
-                Pro Plan
-              </span>
-            </button>
-            <label className="flex min-w-[320px] items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-5 py-3 text-slate-400">
-              <Search className="size-5" />
-              <input
-                value={chatSearch}
-                onChange={(event) => setChatSearch(event.target.value)}
-                placeholder="Search chats..."
-                className="flex-1 bg-transparent text-left text-lg text-slate-100 outline-none placeholder:text-slate-400"
-              />
-              <span className="text-base">Ctrl K</span>
-            </label>
-            <button
-              onClick={() => setTab("status")}
-              className="relative rounded-full p-3 text-slate-300 hover:bg-white/6"
-            >
-              <Bell className="size-6" />
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-fuchsia-500" />
-            </button>
-            <div className="relative flex size-14 items-center justify-center rounded-full border border-white/10 bg-[radial-gradient(circle_at_30%_30%,#ffffff,#6d28d9_45%,#030712_100%)] text-lg font-semibold text-white">
-              T
-              <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-400 ring-2 ring-[#070b16]" />
-            </div>
-          </div>
-        </header>
+      <main className="main-surface flex min-h-screen flex-col overflow-hidden px-6 py-5">
 
         {tab === "chat" && (
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
-            <section className="flex min-h-0 flex-col">
-              <div className="mb-5 flex flex-wrap gap-3">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <section className="mx-auto flex min-h-0 w-full max-w-[920px] flex-1 flex-col">
+              <div className="mb-4 mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                <label className="flex min-w-[220px] flex-1 items-center gap-3 rounded-full bg-[#1f1f1f] px-4 py-2.5">
+                  <Search className="size-4" />
+                  <input
+                    value={chatSearch}
+                    onChange={(event) => setChatSearch(event.target.value)}
+                    placeholder="Search chats"
+                    className="flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
+                  />
+                </label>
+                <button onClick={() => setTab("tools")} className="rounded-full bg-[#1f1f1f] px-4 py-2.5 text-slate-200">
+                  Tools
+                </button>
+                <button onClick={() => setTab("settings")} className="rounded-full bg-[#1f1f1f] px-4 py-2.5 text-slate-200">
+                  Settings
+                </button>
+              </div>
+
+              <div className="mb-5 flex flex-wrap gap-2">
                 {nav.map((item, index) => {
                   const Icon = item.icon;
                   const active = composerSeed.startsWith(item.label) || (index === 0 && !composerSeed);
@@ -460,10 +420,10 @@ export function ChatWorkspace() {
                                     : "More: show me the best tools or workflow for this task."
                         )
                       }
-                      className={`rounded-2xl border px-5 py-3 text-lg transition ${
+                      className={`rounded-full border px-4 py-2.5 text-sm transition ${
                         active
-                          ? "border-fuchsia-400/30 bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white shadow-[0_18px_40px_rgba(99,102,241,0.22)]"
-                          : "border-white/8 bg-[#0b1224] text-slate-200 hover:bg-white/7"
+                          ? "border-white/10 bg-white text-black"
+                          : "border-white/8 bg-[#151515] text-slate-200 hover:bg-[#1c1c1c]"
                       }`}
                     >
                       <span className="flex items-center gap-2.5">
@@ -475,123 +435,38 @@ export function ChatWorkspace() {
                 })}
               </div>
 
-              <div className="conversation-shell flex min-h-0 flex-1 flex-col rounded-[30px]">
+              <div className="conversation-shell flex min-h-0 flex-1 flex-col">
               <MessageList
                 messages={activeConversation.messages}
                 streaming={streaming}
                 onApproveAgent={approveAgentPlan}
               />
               </div>
-              <ChatComposer
-                onSend={handleSend}
-                disabled={streaming}
-                seedText={composerSeed}
-                onSeedApplied={() => setComposerSeed("")}
-                onCreateConversation={createConversation}
-              />
+              <div className="sticky bottom-0 mt-4 bg-gradient-to-t from-black via-black to-transparent pb-4 pt-4">
+                <ChatComposer
+                  onSend={handleSend}
+                  disabled={streaming}
+                  seedText={composerSeed}
+                  onSeedApplied={() => setComposerSeed("")}
+                  onCreateConversation={createConversation}
+                />
+              </div>
             </section>
-
-            <aside className="scrollbar-thin min-h-0 space-y-4 overflow-y-auto">
-              <div className="rail-card rounded-[28px] p-5">
-                <div className="mb-4 text-[1.75rem] font-semibold text-white">AI Models</div>
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-1 items-center justify-between rounded-2xl border border-white/10 bg-white/4 px-4 py-4">
-                    <div className="flex items-center gap-3 text-xl text-white">
-                      <div className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5">
-                        <Sparkles className="size-5" />
-                      </div>
-                      GPT-4o
-                    </div>
-                    <ChevronDown className="size-5 text-slate-400" />
-                  </div>
-                  <button
-                    onClick={() => setTab("settings")}
-                    className="flex size-15 items-center justify-center rounded-2xl border border-white/10 bg-white/4 text-slate-300"
-                  >
-                    <Settings className="size-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="rail-card rounded-[28px] p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-[1.75rem] font-semibold text-white">Tools</div>
-                  <button onClick={() => setTab("tools")} className="text-base text-fuchsia-400">See all ›</button>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: "Web Search", icon: Search, prompt: "Use web search to find the latest information on this topic." },
-                    { label: "AI Image", icon: ImageIcon, prompt: "Help me analyze or generate an image idea." },
-                    { label: "Code Interpreter", icon: Code2, prompt: "Help me write, debug, or explain code." },
-                    { label: "PDF Analyzer", icon: Database, prompt: "I want to upload a PDF and extract the important points." },
-                    { label: "Voice Chat", icon: Mic, prompt: "Use voice-friendly replies and help me talk through this." },
-                    { label: "All Tools", icon: BrainCircuit, prompt: "Show me which tools in Chat.ai are best for this task." },
-                  ].map((item) => {
-                    const ToolIcon = item.icon;
-                    return (
-                      <button
-                        key={item.label}
-                        onClick={() => queuePrompt(item.prompt)}
-                        className="rounded-2xl border border-white/8 bg-white/4 p-4 text-center transition hover:bg-white/8"
-                      >
-                        <ToolIcon className="mx-auto mb-3 size-7 text-fuchsia-400" />
-                        <div className="text-sm leading-tight text-white">{item.label}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <BrowserAgentPanel />
-              <AuthPanel user={user} onAuthChange={refreshSession} />
-
-              <div className="rail-card rounded-[28px] p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-[1.75rem] font-semibold text-white">Memory</div>
-                  <button onClick={clearMemory} className="text-base text-fuchsia-400">Clear all ›</button>
-                </div>
-                <p className="mb-4 text-lg text-slate-300">Temporary mode is on by default. Long-term memory starts empty until you decide to keep data.</p>
-                {activeConversation.memory ? (
-                  <div className="flex flex-wrap gap-2">
-                    {activeConversation.memory.split("\n").filter(Boolean).map((tag) => (
-                      <span key={tag} className="rounded-2xl border border-white/8 bg-white/5 px-3 py-2 text-sm text-slate-200">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/4 px-4 py-4 text-sm text-slate-400">
-                    No saved memory yet.
-                  </div>
-                )}
-              </div>
-
-              <div className="rail-card rounded-[28px] p-5">
-                <div className="mb-4 text-[1.75rem] font-semibold text-white">Today’s Activity</div>
-                <div className="activity-graph flex h-48 items-end justify-between rounded-2xl px-4 pb-5 pt-3">
-                  {[16, 42, 24, 55, 31, 72, 40].map((height, index) => (
-                    <div key={index} className="flex h-full flex-1 items-end justify-center">
-                      <div
-                        className="w-full max-w-8 rounded-full bg-gradient-to-t from-fuchsia-600 via-indigo-500 to-violet-300 shadow-[0_0_28px_rgba(124,58,237,0.35)]"
-                        style={{ height: `${height}%` }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 flex justify-between text-sm text-slate-500">
-                  <span>12AM</span>
-                  <span>6AM</span>
-                  <span>12PM</span>
-                  <span>6PM</span>
-                  <span>12AM</span>
-                </div>
-              </div>
-            </aside>
           </div>
         )}
 
-        {tab === "tools" && <ToolPanel />}
-        {tab === "settings" && <SettingsPanel />}
+        {tab === "tools" && (
+          <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 py-4">
+            <ToolPanel />
+            <BrowserAgentPanel />
+          </div>
+        )}
+        {tab === "settings" && (
+          <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 py-4">
+            <AuthPanel user={user} onAuthChange={refreshSession} />
+            <SettingsPanel />
+          </div>
+        )}
         {tab === "status" && <StatusPanel />}
       </main>
     </div>

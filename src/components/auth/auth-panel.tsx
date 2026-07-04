@@ -80,7 +80,7 @@ export function AuthPanel({
     const { error } = await client.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/`,
       },
     });
     if (error) {

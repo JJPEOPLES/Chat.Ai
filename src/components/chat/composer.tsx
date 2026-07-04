@@ -139,14 +139,14 @@ export function ChatComposer({
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder="Message Chat.ai anything..."
-          className="min-h-20 w-full resize-none bg-transparent text-[1.8rem] text-slate-100 outline-none placeholder:text-slate-500"
+          className="min-h-12 w-full resize-none bg-transparent text-[1.05rem] text-slate-100 outline-none placeholder:text-slate-500"
         />
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <button
               onClick={onCreateConversation}
-              className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300"
+              className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300"
             >
               <Plus className="size-5" />
             </button>
@@ -160,7 +160,7 @@ export function ChatComposer({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
             >
               <Paperclip className="size-4" />
               Upload
@@ -171,21 +171,21 @@ export function ChatComposer({
                   `${current}${current ? "\n\n" : ""}Think step by step and give me the strongest answer.`
                 )
               }
-              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 px-4 py-2.5 text-lg text-fuchsia-300"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200"
             >
               <Mic className="size-4" />
-              Deep Think
+              Think
             </button>
             <button
               onClick={() => setContent((current) => `${current}${current ? "\n\n" : ""}Help me with an image task.`)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200"
             >
               <ImageIcon className="size-4" />
               Image
             </button>
             <button
               onClick={() => setContent((current) => `${current}${current ? "\n\n" : ""}Help me write or debug code.`)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200"
             >
               <SquareCode className="size-4" />
               Code
@@ -193,26 +193,26 @@ export function ChatComposer({
             <button
               onClick={startListening}
               disabled={!speechAvailable}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200 disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200 disabled:opacity-40"
             >
               <Mic className="size-4" />
-              {isListening ? "Listening..." : "Voice input"}
+              {isListening ? "Listening..." : "Mic"}
             </button>
             <button
               onClick={speakDraft}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm text-slate-200"
             >
               <Volume2 className="size-4" />
-              Voice output
+              Speak
             </button>
           </div>
 
           <button
             disabled={disabled}
             onClick={submit}
-            className="flex size-18 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-white shadow-[0_18px_42px_rgba(124,58,237,0.45)] disabled:opacity-50"
+            className="flex size-12 items-center justify-center rounded-full bg-white text-black shadow-[0_18px_42px_rgba(255,255,255,0.12)] disabled:opacity-50"
           >
-            <Send className="size-6" />
+            <Send className="size-5" />
           </button>
         </div>
       </div>
