@@ -10,6 +10,7 @@ export function SettingsPanel() {
             <li>AI provider credentials stay server-side only.</li>
             <li>Supabase auth and sync are optional until you add project keys.</li>
             <li>Optional third-party tools fail gracefully when not configured.</li>
+            <li>Temporary mode is the default, so long-term memory starts empty.</li>
           </ul>
         </section>
 

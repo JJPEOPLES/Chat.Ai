@@ -26,6 +26,7 @@ export function AppSidebar({
   activeTab,
   onTabChange,
   user,
+  searchQuery,
 }: {
   conversations: Conversation[];
   activeId: string;
@@ -34,19 +35,28 @@ export function AppSidebar({
   activeTab: "chat" | "tools" | "settings" | "status";
   onTabChange: (tab: "chat" | "tools" | "settings" | "status") => void;
   user?: { email?: string | null } | null;
+  searchQuery?: string;
 }) {
   const menuItems = [
     { label: "Home", icon: Home, tab: "chat" as const, active: activeTab === "chat" },
-    { label: "Explore AI's", icon: Compass, tab: "tools" as const, active: false },
-    { label: "Projects", icon: FolderKanban, tab: "chat" as const, active: false },
-    { label: "Memory", icon: MemoryStick, tab: "status" as const, active: false },
-    { label: "Files", icon: Files, tab: "chat" as const, active: false },
-    { label: "Images", icon: FileImage, tab: "chat" as const, active: false },
-    { label: "Voice", icon: Mic, tab: "chat" as const, active: false },
-    { label: "Code", icon: SquareTerminal, tab: "tools" as const, active: false },
-    { label: "Tasks", icon: CheckSquare, tab: "status" as const, active: false },
+    { label: "Explore AI's", icon: Compass, tab: "tools" as const, active: activeTab === "tools" },
+    { label: "Projects", icon: FolderKanban, tab: "chat" as const, active: activeTab === "chat" },
+    { label: "Memory", icon: MemoryStick, tab: "status" as const, active: activeTab === "status" },
+    { label: "Files", icon: Files, tab: "chat" as const, active: activeTab === "chat" },
+    { label: "Images", icon: FileImage, tab: "chat" as const, active: activeTab === "chat" },
+    { label: "Voice", icon: Mic, tab: "chat" as const, active: activeTab === "chat" },
+    { label: "Code", icon: SquareTerminal, tab: "tools" as const, active: activeTab === "tools" },
+    { label: "Tasks", icon: CheckSquare, tab: "status" as const, active: activeTab === "status" },
     { label: "Settings", icon: Settings, tab: "settings" as const, active: activeTab === "settings" },
   ];
+  const filteredConversations = conversations.filter((conversation) => {
+    const query = searchQuery?.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      conversation.title.toLowerCase().includes(query) ||
+      conversation.messages.some((message) => message.content.toLowerCase().includes(query))
+    );
+  });
 
   return (
     <aside className="sidebar-panel scrollbar-thin flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-[28px] px-5 py-6">
@@ -98,12 +108,12 @@ export function AppSidebar({
       <div className="mt-1 border-t border-white/8 pt-5">
         <div className="mb-3 flex items-center justify-between text-sm text-slate-400">
           <span>Your Chats</span>
-          <button className="text-xl leading-none text-slate-300">
+          <button onClick={onCreate} className="text-xl leading-none text-slate-300">
             <Plus className="size-4" />
           </button>
         </div>
         <div className="space-y-1.5">
-          {conversations.map((conversation) => {
+          {filteredConversations.map((conversation) => {
             const isActive = conversation.id === activeId;
             return (
               <button
@@ -125,7 +135,7 @@ export function AppSidebar({
         </div>
       </div>
 
-      <button className="mt-5 text-sm text-slate-300 hover:text-white">View all →</button>
+      <button onClick={() => onTabChange("chat")} className="mt-5 text-sm text-slate-300 hover:text-white">View all →</button>
 
       <div className="mt-auto border-t border-white/8 pt-5">
         <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 p-3">

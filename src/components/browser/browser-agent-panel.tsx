@@ -7,7 +7,7 @@ import type { BrowserPlan, BrowserRunResult } from "@/lib/types";
 
 export function BrowserAgentPanel() {
   const [request, setRequest] = useState(
-    "Make an API key for me on these websites: https://example.com https://example.org"
+    "Check these providers, inspect their docs or dashboard pages, decide the best next action, and help me create the required keys one provider at a time with approval before any form submission."
   );
   const [plan, setPlan] = useState<BrowserPlan | null>(null);
   const [result, setResult] = useState<BrowserRunResult | null>(null);
@@ -70,11 +70,11 @@ export function BrowserAgentPanel() {
           <div className="rounded-2xl bg-fuchsia-500/12 p-3 text-fuchsia-300">
             <Globe className="size-5" />
           </div>
-          <div>
-            <div className="text-[1.55rem] font-semibold text-white">Browser Agent</div>
-            <div className="text-sm text-slate-400">Approval required before any website action runs</div>
+            <div>
+              <div className="text-[1.55rem] font-semibold text-white">Browser Agent</div>
+            <div className="text-sm text-slate-400">Explores websites, builds the next action sequence, and waits for approval</div>
+            </div>
           </div>
-        </div>
         <div className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
           Confirm first
         </div>

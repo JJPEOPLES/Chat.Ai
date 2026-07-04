@@ -8,9 +8,15 @@ import type { Attachment } from "@/lib/types";
 export function ChatComposer({
   onSend,
   disabled,
+  seedText,
+  onSeedApplied,
+  onCreateConversation,
 }: {
   onSend: (content: string, attachments: Attachment[]) => Promise<void>;
   disabled: boolean;
+  seedText?: string;
+  onSeedApplied?: () => void;
+  onCreateConversation?: () => void;
 }) {
   const speechAvailable = useSyncExternalStore(
     subscribeToBrowserCapabilities,
@@ -22,6 +28,16 @@ export function ChatComposer({
   const [isListening, setIsListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    if (!seedText) return;
+    const timer = window.setTimeout(() => {
+      setContent(seedText);
+      onSeedApplied?.();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [seedText, onSeedApplied]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -86,7 +102,7 @@ export function ChatComposer({
   }
 
   function speakDraft() {
-    if (!content.trim()) return;
+    if (typeof window === "undefined" || !content.trim()) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(content);
     utterance.rate = 1;
@@ -128,7 +144,10 @@ export function ChatComposer({
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            <button className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300">
+            <button
+              onClick={onCreateConversation}
+              className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300"
+            >
               <Plus className="size-5" />
             </button>
             <input
@@ -144,17 +163,30 @@ export function ChatComposer({
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200 hover:bg-white/10"
             >
               <Paperclip className="size-4" />
-              Search
+              Upload
             </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 px-4 py-2.5 text-lg text-fuchsia-300">
+            <button
+              onClick={() =>
+                setContent((current) =>
+                  `${current}${current ? "\n\n" : ""}Think step by step and give me the strongest answer.`
+                )
+              }
+              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 px-4 py-2.5 text-lg text-fuchsia-300"
+            >
               <Mic className="size-4" />
               Deep Think
             </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200">
+            <button
+              onClick={() => setContent((current) => `${current}${current ? "\n\n" : ""}Help me with an image task.`)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200"
+            >
               <ImageIcon className="size-4" />
               Image
             </button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200">
+            <button
+              onClick={() => setContent((current) => `${current}${current ? "\n\n" : ""}Help me write or debug code.`)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2.5 text-lg text-slate-200"
+            >
               <SquareCode className="size-4" />
               Code
             </button>

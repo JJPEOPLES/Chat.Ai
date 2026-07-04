@@ -44,10 +44,10 @@ const browserActionSchema = z.discriminatedUnion("type", [
 const browserPlanSchema = z.object({
   title: z.string(),
   summary: z.string(),
-  websites: z.array(z.string().url()).max(10),
+  websites: z.array(z.string().url()).max(25),
   risks: z.array(z.string()).max(10),
   requiresLogin: z.boolean(),
-  steps: z.array(browserActionSchema).min(1).max(25),
+  steps: z.array(browserActionSchema).min(1).max(80),
 });
 
 function extractJsonObject(input: string) {
@@ -61,15 +61,21 @@ function extractJsonObject(input: string) {
 }
 
 function buildFallbackPlan(request: string): BrowserPlan {
-  const urlMatches = [...request.matchAll(/https?:\/\/[^\s)]+/g)].map((match) => match[0]);
+  const urlMatches = [...new Set([...request.matchAll(/https?:\/\/[^\s)]+/g)].map((match) => match[0]))];
+  const providerUrls = urlMatches.filter(
+    (url) => !/chataiwebs\.netlify\.app|localhost:3000|supabase\.co\/auth\/v1\/callback/i.test(url)
+  );
+  const targets = (providerUrls.length ? providerUrls : urlMatches).slice(0, 25);
+
   return {
-    title: "Open requested websites",
-    summary: "This fallback plan opens the provided websites in a fresh browser session.",
-    websites: urlMatches,
+    title: "Inspect requested providers",
+    summary:
+      "This fallback plan opens the requested provider websites, captures the current state, and prepares for provider-by-provider follow-up.",
+    websites: targets,
     risks: ["Complex authenticated flows may require manual follow-up."],
     requiresLogin: /login|sign in|account|api key/i.test(request),
-    steps: urlMatches.length
-      ? urlMatches.flatMap((url, index) => [
+    steps: targets.length
+      ? targets.flatMap((url, index) => [
           { type: "goto", url, note: `Open website ${index + 1}` } satisfies BrowserAction,
           { type: "screenshot", name: `website-${index + 1}` } satisfies BrowserAction,
         ])
@@ -90,6 +96,12 @@ export async function generateBrowserPlan(request: string) {
 
   const plannerPrompt = [
     "You are a browser automation planner for Chat.ai.",
+    "Your job is to inspect provider websites and decide the next best action instead of merely echoing all input URLs.",
+    "Prefer provider-by-provider execution for API key setup, developer portal setup, and OAuth app creation.",
+    "Only include the websites that are actually needed for the next sequence of actions.",
+    "Avoid including the app URL, localhost URL, or Supabase callback URL unless they are specifically needed for a step such as entering redirect URIs.",
+    "Use as many steps as needed up to 80, but keep them high-signal and action-oriented.",
+    "When many providers are listed, prioritize the easiest provider that can be advanced next and mention the remaining providers in risks or summary.",
     "Return only JSON matching this shape:",
     '{"title":"string","summary":"string","websites":["https://..."],"risks":["string"],"requiresLogin":true,"steps":[{"type":"goto","url":"https://..."}]}',
     "Supported steps only:",
@@ -102,6 +114,7 @@ export async function generateBrowserPlan(request: string) {
     '- screenshot { name }',
     '- extractText { target, name }',
     "Keep steps concrete and short. Do not invent credentials. If login or CAPTCHAs are likely, mention them in risks.",
+    "If a flow needs approval before creating a key or submitting a form, end the plan right before that action whenever possible.",
   ].join("\n");
 
   const response = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
