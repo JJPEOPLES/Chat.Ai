@@ -3,26 +3,11 @@ import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase
 
 function resolveSafeRedirect(request: Request, next: string) {
   const currentUrl = new URL(request.url);
-  const currentHostIsLocal =
-    currentUrl.hostname === "localhost" || currentUrl.hostname === "127.0.0.1";
-
-  try {
-    const target = new URL(next, currentUrl);
-    const targetHostIsLocal =
-      target.hostname === "localhost" || target.hostname === "127.0.0.1";
-
-    if (!currentHostIsLocal && targetHostIsLocal) {
-      return new URL("/", currentUrl);
-    }
-
-    if (target.origin !== currentUrl.origin && !currentHostIsLocal) {
-      return new URL(target.pathname + target.search + target.hash, currentUrl);
-    }
-
-    return target;
-  } catch {
+  if (!next.startsWith("/") || next.startsWith("//")) {
     return new URL("/", currentUrl);
   }
+
+  return new URL(next, currentUrl);
 }
 
 export async function GET(request: Request) {
