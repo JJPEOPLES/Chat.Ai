@@ -211,9 +211,7 @@ export function ChatWorkspace() {
     const plan = data.plan as BrowserPlan;
     updateMessageById(agentMessageId, (message) => ({
       ...message,
-      content:
-        `I inspected the request and prepared an approval-first browser workflow.\n\n` +
-        `Done: ${plan.websites[0] ?? "Browser task"}\n`,
+      content: plan.summary,
       agentPlan: plan,
       pendingApproval: true,
       attachments: sanitizeAttachmentsForStorage(attachments),

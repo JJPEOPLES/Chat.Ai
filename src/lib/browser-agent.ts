@@ -60,25 +60,200 @@ function extractJsonObject(input: string) {
   return input.slice(start, end + 1);
 }
 
+type RequestedProvider = {
+  provider: string;
+  url: string;
+  env: string;
+};
+
+function parseRequestedProviders(request: string): RequestedProvider[] {
+  const lines = request.split(/\r?\n/);
+  const providers: RequestedProvider[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const providerMatch = lines[index]?.match(/^\s*\d+\.\s+(.+?)\s*$/);
+    if (!providerMatch) continue;
+
+    const provider = providerMatch[1].trim();
+    const urlLine = lines[index + 1] ?? "";
+    const envLine = lines[index + 2] ?? "";
+    const urlMatch = urlLine.match(/URL:\s*(https?:\/\/\S+)/i);
+    const envMatch = envLine.match(/Env:\s*([A-Z0-9_]+)/i);
+
+    if (!urlMatch || !envMatch) continue;
+
+    providers.push({
+      provider,
+      url: urlMatch[1].trim(),
+      env: envMatch[1].trim(),
+    });
+  }
+
+  return providers;
+}
+
+function inferProviderRow(provider: RequestedProvider) {
+  const name = provider.provider.toLowerCase();
+
+  const defaults = {
+    keyNeeded: "Yes",
+    freeTier: "Unknown",
+    billingRequired: "Unknown",
+    manualVerification: "Possible",
+    bestNextAction: "Open docs and find sign-up or API access entry point.",
+  };
+
+  if (name.includes("serpapi")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "Not initially",
+      manualVerification: "Low",
+      bestNextAction: "Open pricing or sign-up, confirm free credits, then stop before account creation.",
+    };
+  }
+
+  if (name.includes("world news")) {
+    return {
+      ...defaults,
+      freeTier: "Likely",
+      billingRequired: "Unknown",
+      manualVerification: "Low",
+      bestNextAction: "Open docs or pricing, confirm whether an API key is required and whether a free plan exists.",
+    };
+  }
+
+  if (name.includes("mapbox")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "May be required later",
+      manualVerification: "Low",
+      bestNextAction: "Open account or token docs, confirm default public token flow, then stop before token creation.",
+    };
+  }
+
+  if (name.includes("netlify")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "No",
+      manualVerification: "Low",
+      bestNextAction: "Open personal access token docs and stop before creating a token.",
+    };
+  }
+
+  if (name.includes("omdb")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "No",
+      manualVerification: "Low",
+      bestNextAction: "Open key request flow and stop before final submit.",
+    };
+  }
+
+  if (name.includes("twitter") || name.includes("x api")) {
+    return {
+      ...defaults,
+      freeTier: "Limited / changes often",
+      billingRequired: "Possible",
+      manualVerification: "High",
+      bestNextAction: "Open developer access docs and confirm current plan requirements before any signup steps.",
+    };
+  }
+
+  if (name.includes("google maps") || name.includes("youtube")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "Usually yes for project setup",
+      manualVerification: "Medium",
+      bestNextAction: "Open Google Cloud setup docs and stop before enabling billing or creating credentials.",
+    };
+  }
+
+  if (name.includes("ebay")) {
+    return {
+      ...defaults,
+      freeTier: "Yes",
+      billingRequired: "No",
+      manualVerification: "Medium",
+      bestNextAction: "Open developer program sign-up and confirm keyset flow before account steps.",
+    };
+  }
+
+  if (name.includes("gyazo") || name.includes("adoptapet")) {
+    return {
+      ...defaults,
+      freeTier: "Unknown",
+      billingRequired: "Unknown",
+      manualVerification: "Possible",
+      bestNextAction: "Open docs and find authentication or access requirements before any signup flow.",
+    };
+  }
+
+  return defaults;
+}
+
 function buildFallbackPlan(request: string): BrowserPlan {
+  const providers = parseRequestedProviders(request);
+  if (providers.length) {
+    const firstProvider = providers[0];
+    const rows = providers
+      .map((provider) => {
+        const details = inferProviderRow(provider);
+        return `| ${provider.provider} | ${provider.env} | ${details.keyNeeded} | ${details.freeTier} | ${details.billingRequired} | ${details.manualVerification} | ${details.bestNextAction} |`;
+      })
+      .join("\n");
+
+    return {
+      title: `Provider setup: ${firstProvider.provider}`,
+      summary: [
+        "I inspected your provider list and picked the best first provider to advance next.",
+        "",
+        "| provider | env var | key needed? | free tier? | billing required? | manual verification needed? | best next action |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        rows,
+        "",
+        `First provider to advance next: **${firstProvider.provider}**`,
+        "Approve the first provider only; I should stop before any login, signup submit, billing, or key creation step.",
+      ].join("\n"),
+      websites: [firstProvider.url],
+      risks: [
+        "Provider pricing, verification, and signup requirements can change.",
+        "I must pause before account creation, key creation, billing, or terms acceptance.",
+      ],
+      requiresLogin: true,
+      steps: [
+        { type: "goto", url: firstProvider.url, note: `Open ${firstProvider.provider}` },
+        {
+          type: "wait",
+          milliseconds: 1200,
+          note: "Let the page finish initial rendering before identifying the entry point.",
+        },
+      ],
+    };
+  }
+
   const urlMatches = [...new Set([...request.matchAll(/https?:\/\/[^\s)]+/g)].map((match) => match[0]))];
   const providerUrls = urlMatches.filter(
     (url) => !/chataiwebs\.netlify\.app|localhost:3000|supabase\.co\/auth\/v1\/callback/i.test(url)
   );
-  const targets = (providerUrls.length ? providerUrls : urlMatches).slice(0, 25);
+  const targets = (providerUrls.length ? providerUrls : urlMatches).slice(0, 1);
 
   return {
-    title: "Inspect requested providers",
+    title: "Inspect requested provider",
     summary:
-      "This fallback plan opens the requested provider websites, captures the current state, and prepares for provider-by-provider follow-up.",
+      "I prepared a provider-first browser workflow. Approve one provider at a time, and I will stop before any approval-gated action.",
     websites: targets,
     risks: ["Complex authenticated flows may require manual follow-up."],
     requiresLogin: /login|sign in|account|api key/i.test(request),
     steps: targets.length
-      ? targets.flatMap((url, index) => [
-          { type: "goto", url, note: `Open website ${index + 1}` } satisfies BrowserAction,
-          { type: "screenshot", name: `website-${index + 1}` } satisfies BrowserAction,
-        ])
+      ? [
+          { type: "goto", url: targets[0], note: "Open the first provider website" } satisfies BrowserAction,
+          { type: "wait", milliseconds: 1200, note: "Wait for the page to stabilize" } satisfies BrowserAction,
+        ]
       : [
           {
             type: "wait",
@@ -98,6 +273,10 @@ export async function generateBrowserPlan(request: string) {
     "You are a browser automation planner for Chat.ai.",
     "Your job is to inspect provider websites and decide the next best action instead of merely echoing all input URLs.",
     "Prefer provider-by-provider execution for API key setup, developer portal setup, and OAuth app creation.",
+    "When the user provides a provider list with env var names, summarize it as a markdown table inside the summary field.",
+    "The summary field should contain a table with these columns: provider, env var, key needed?, free tier?, billing required?, manual verification needed?, best next action.",
+    "Pick only the single best provider to advance next.",
+    "Do not create screenshot-only plans for provider setup.",
     "Only include the websites that are actually needed for the next sequence of actions.",
     "Avoid including the app URL, localhost URL, or Supabase callback URL unless they are specifically needed for a step such as entering redirect URIs.",
     "Use as many steps as needed up to 80, but keep them high-signal and action-oriented.",
@@ -115,6 +294,7 @@ export async function generateBrowserPlan(request: string) {
     '- extractText { target, name }',
     "Keep steps concrete and short. Do not invent credentials. If login or CAPTCHAs are likely, mention them in risks.",
     "If a flow needs approval before creating a key or submitting a form, end the plan right before that action whenever possible.",
+    "The plan should ask for approval of the first provider before any login, signup submit, billing, or key creation action.",
   ].join("\n");
 
   const response = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
