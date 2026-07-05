@@ -228,12 +228,7 @@ export function ChatWorkspace() {
       pendingApproval: false,
     }));
 
-    const response = await fetch("/api/browser/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ approved: true, plan: message.agentPlan }),
-    });
-    const data = (await response.json()) as BrowserRunResult | { error?: string };
+    const { response, data } = await executeBrowserRun(message.agentPlan);
 
     updateMessageById(messageId, (current) => ({
       ...current,
@@ -244,6 +239,45 @@ export function ChatWorkspace() {
       agentResult: response.ok ? (data as BrowserRunResult) : undefined,
       pendingApproval: false,
     }));
+  }
+
+  async function executeBrowserRun(plan: BrowserPlan) {
+    const payload = JSON.stringify({ approved: true, plan });
+    const localBridgeUrls = ["http://127.0.0.1:4467/run", "http://localhost:4467/run"];
+
+    for (const url of localBridgeUrls) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+        const data = (await response.json()) as BrowserRunResult | { error?: string };
+        return { response, data };
+      } catch {
+        continue;
+      }
+    }
+
+    const response = await fetch("/api/browser/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+    });
+    const data = (await response.json()) as BrowserRunResult | { error?: string };
+
+    if (!response.ok && "error" in data && data.error?.includes("Netlify runtime")) {
+      return {
+        response,
+        data: {
+          error:
+            `${data.error} Start the local helper with "npm run browser:bridge" on your computer, ` +
+            "then approve the task again.",
+        },
+      };
+    }
+
+    return { response, data };
   }
 
   async function handleSend(content: string, attachments: Attachment[]) {

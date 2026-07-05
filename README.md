@@ -94,6 +94,18 @@ Public/free tools work immediately. Keyed tools stay optional and fail gracefull
 - Nothing executes until you explicitly approve the plan.
 - Runs use a fresh Playwright browser session, not your personal signed-in browser profile.
 - Login walls, CAPTCHAs, MFA, and provider-specific anti-bot flows may still require manual follow-up.
+- On the hosted Netlify app, actual browser execution must run through a local helper on your machine.
+
+### Local browser bridge
+
+To let the hosted app execute approved browser tasks on your computer:
+
+```bash
+npm run browser:bridge
+```
+
+That starts a local Playwright bridge on `http://127.0.0.1:4467`.
+The hosted Chat.ai app will try that bridge first whenever you click `Approve & run`.
 
 ## Deployment
 
