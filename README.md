@@ -4,6 +4,7 @@ Chat.ai is a polished Next.js AI assistant with:
 
 - dark futuristic UI
 - streaming chat
+- project workspaces with isolated instructions and memory
 - local chat history
 - optional Supabase auth/database sync
 - file uploads for images, audio, video, PDF, and text
@@ -58,6 +59,12 @@ If you want auth + cloud sync:
 5. Add your auth providers in Supabase Auth, including Google when ready
 
 Without those keys, the app runs in guest mode with local persistence.
+
+The latest schema adds:
+
+- `projects` table for isolated workspaces
+- `project_id` on conversations
+- per-project instructions and memory item arrays
 
 ## Tool routing
 

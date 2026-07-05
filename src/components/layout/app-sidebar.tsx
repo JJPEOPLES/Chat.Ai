@@ -7,12 +7,13 @@ import {
   FolderKanban,
   Home,
   MessageSquarePlus,
+  PanelTopOpen,
   Settings,
   Sparkles,
   CheckSquare,
 } from "lucide-react";
 import { formatDate, truncate } from "@/lib/utils";
-import type { Conversation } from "@/lib/types";
+import type { Conversation, Project } from "@/lib/types";
 
 export function AppSidebar({
   conversations,
@@ -23,6 +24,10 @@ export function AppSidebar({
   onTabChange,
   user,
   searchQuery,
+  projects,
+  activeProjectId,
+  onSelectProject,
+  onCreateProject,
 }: {
   conversations: Conversation[];
   activeId: string;
@@ -32,6 +37,10 @@ export function AppSidebar({
   onTabChange: (tab: "chat" | "tools" | "settings" | "status") => void;
   user?: { email?: string | null } | null;
   searchQuery?: string;
+  projects: Project[];
+  activeProjectId: string;
+  onSelectProject: (projectId: string) => void;
+  onCreateProject: () => void;
 }) {
   const menuItems = [
     { label: "New chat", icon: MessageSquarePlus, tab: "chat" as const, active: activeTab === "chat" },
@@ -43,6 +52,7 @@ export function AppSidebar({
     { label: "More", icon: Compass, tab: "settings" as const, active: activeTab === "settings" },
   ];
   const filteredConversations = conversations.filter((conversation) => {
+    if (conversation.projectId !== activeProjectId) return false;
     const query = searchQuery?.trim().toLowerCase();
     if (!query) return true;
     return (
@@ -84,6 +94,28 @@ export function AppSidebar({
       </div>
 
       <div className="mt-2 border-t border-white/8 pt-4">
+        <div className="mb-3 flex items-center justify-between px-2 text-sm font-medium text-slate-400">
+          <span>Projects</span>
+          <button onClick={onCreateProject} className="text-slate-300">+</button>
+        </div>
+        <div className="mb-4 space-y-1.5">
+          {projects.map((project) => {
+            const isActive = project.id === activeProjectId;
+            return (
+              <button
+                key={project.id}
+                onClick={() => onSelectProject(project.id)}
+                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${
+                  isActive ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5"
+                }`}
+              >
+                <PanelTopOpen className="size-4" />
+                <span className="truncate">{project.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="mb-3 px-2 text-sm font-medium text-slate-400">Recents</div>
         <div className="space-y-1.5">
           {filteredConversations.map((conversation) => {

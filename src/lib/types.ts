@@ -28,11 +28,21 @@ export type Message = {
 
 export type Conversation = {
   id: string;
+  projectId: string;
   title: string;
   createdAt: string;
   updatedAt: string;
   messages: Message[];
   memory?: string;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  instructions?: string;
+  memoryItems: string[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ToolStatus = "available" | "optional" | "disabled";

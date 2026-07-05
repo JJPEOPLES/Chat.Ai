@@ -38,6 +38,7 @@ function buildCapabilityPrompt() {
     "- answering questions about uploaded files",
     "- voice input and voice output support in the app UI",
     "- chat history and saved conversations in the app",
+    "- project workspaces with isolated instructions and memory",
     "- temporary mode by default, with no long-term memory assumed unless the app explicitly stores it",
     "- optional Supabase-backed auth and cloud sync when configured",
     "- a browser agent that can inspect websites and prepare approval-first action plans",

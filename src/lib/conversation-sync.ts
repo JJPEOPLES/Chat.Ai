@@ -1,7 +1,10 @@
-import type { Attachment, Conversation, Message } from "./types";
+import type { Attachment, Conversation, Message, Project } from "./types";
+
+export const DEFAULT_PROJECT_ID = "00000000-0000-4000-8000-000000000001";
 
 type DbConversation = {
   id: string;
+  project_id?: string | null;
   title: string;
   memory: string | null;
   created_at: string;
@@ -23,9 +26,30 @@ type DbConversation = {
   }>;
 };
 
-export function createStarterConversation(): Conversation {
+type DbProject = {
+  id: string;
+  name: string;
+  instructions: string | null;
+  memory_items: string[] | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function createStarterProject(): Project {
+  return {
+    id: DEFAULT_PROJECT_ID,
+    name: "General",
+    instructions: "Default workspace for everyday chats and experiments.",
+    memoryItems: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function createStarterConversation(projectId = DEFAULT_PROJECT_ID): Conversation {
   return {
     id: crypto.randomUUID(),
+    projectId,
     title: "New conversation",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -34,16 +58,28 @@ export function createStarterConversation(): Conversation {
         id: crypto.randomUUID(),
         role: "assistant",
         content:
-          "Welcome to **Chat.ai**.\n\nI can chat, stream answers, inspect uploads, and route your request to public or optional tools automatically.",
+          "Welcome to **Chat.ai**.\n\nI can chat, stream answers, inspect uploads, route your request to live tools, and keep each project workspace isolated.",
         createdAt: new Date().toISOString(),
       },
     ],
   };
 }
 
+export function mapDbProjects(projects: DbProject[]): Project[] {
+  return projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    instructions: project.instructions ?? undefined,
+    memoryItems: project.memory_items ?? [],
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
+  }));
+}
+
 export function mapDbConversations(conversations: DbConversation[]): Conversation[] {
   return conversations.map((conversation) => ({
     id: conversation.id,
+    projectId: conversation.project_id ?? DEFAULT_PROJECT_ID,
     title: conversation.title,
     memory: conversation.memory ?? undefined,
     createdAt: conversation.created_at,

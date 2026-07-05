@@ -18,8 +18,8 @@ import { MessageList } from "@/components/chat/message-list";
 import { ToolPanel } from "@/components/status/tool-panel";
 import { SettingsPanel } from "@/components/status/settings-panel";
 import { StatusPanel } from "@/components/status/status-panel";
-import { createStarterConversation } from "@/lib/conversation-sync";
-import type { Attachment, BrowserPlan, BrowserRunResult, Conversation, Message } from "@/lib/types";
+import { createStarterConversation, createStarterProject, DEFAULT_PROJECT_ID } from "@/lib/conversation-sync";
+import type { Attachment, BrowserPlan, BrowserRunResult, Conversation, Message, Project } from "@/lib/types";
 
 type Tab = "chat" | "tools" | "settings" | "status";
 
@@ -31,7 +31,9 @@ export function ChatWorkspace() {
     user_metadata?: { full_name?: string; avatar_url?: string };
   } | null>(null);
   const [tab, setTab] = useState<Tab>("chat");
-  const [conversations, setConversations] = useState<Conversation[]>([createStarterConversation()]);
+  const [projects, setProjects] = useState<Project[]>([createStarterProject()]);
+  const [activeProjectId, setActiveProjectId] = useState<string>(DEFAULT_PROJECT_ID);
+  const [conversations, setConversations] = useState<Conversation[]>([createStarterConversation(DEFAULT_PROJECT_ID)]);
   const [activeId, setActiveId] = useState<string>("");
   const [streaming, setStreaming] = useState(false);
   const [useTools] = useState(true);
@@ -45,8 +47,8 @@ export function ChatWorkspace() {
   useEffect(() => {
     if (!authReady) return;
     if (user) return;
-    window.localStorage.setItem("chat-ai-conversations", JSON.stringify(conversations));
-  }, [authReady, conversations, user]);
+    window.localStorage.setItem("chat-ai-project-state", JSON.stringify({ projects, conversations, activeProjectId }));
+  }, [activeProjectId, authReady, conversations, projects, user]);
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -55,15 +57,17 @@ export function ChatWorkspace() {
       await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversations }),
+        body: JSON.stringify({ projects, conversations }),
       });
     }, 500);
 
     return () => window.clearTimeout(timeout);
-  }, [authReady, conversations, user]);
+  }, [authReady, conversations, projects, user]);
 
+  const projectConversations = conversations.filter((conversation) => conversation.projectId === activeProjectId);
   const activeConversation =
-    conversations.find((conversation) => conversation.id === activeId) ?? conversations[0];
+    projectConversations.find((conversation) => conversation.id === activeId) ?? projectConversations[0];
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
 
   const nav = useMemo(
     () => [
@@ -80,6 +84,7 @@ export function ChatWorkspace() {
   function createConversation() {
     const conversation: Conversation = {
       id: crypto.randomUUID(),
+      projectId: activeProjectId,
       title: "New conversation",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -90,6 +95,50 @@ export function ChatWorkspace() {
     setActiveId(conversation.id);
     setTab("chat");
     setComposerSeed("");
+  }
+
+  function createProject() {
+    const projectId = crypto.randomUUID();
+    const project: Project = {
+      id: projectId,
+      name: `Project ${projects.length + 1}`,
+      instructions: "",
+      memoryItems: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const starterConversation = createStarterConversation(projectId);
+    setProjects((current) => [project, ...current]);
+    setConversations((current) => [starterConversation, ...current]);
+    setActiveProjectId(projectId);
+    setActiveId(starterConversation.id);
+    setTab("chat");
+  }
+
+  function selectProject(projectId: string) {
+    setActiveProjectId(projectId);
+    const firstConversation = conversations.find((conversation) => conversation.projectId === projectId);
+    if (firstConversation) {
+      setActiveId(firstConversation.id);
+      return;
+    }
+    const conversation = createStarterConversation(projectId);
+    setConversations((current) => [conversation, ...current]);
+    setActiveId(conversation.id);
+  }
+
+  function updateProject(projectId: string, updates: Partial<Project>) {
+    setProjects((current) =>
+      current.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            }
+          : project
+      )
+    );
   }
 
   function queuePrompt(prompt: string) {
@@ -109,35 +158,55 @@ export function ChatWorkspace() {
     if (data.user) {
       const conversationsResponse = await fetch("/api/conversations");
       const conversationsData = (await conversationsResponse.json()) as {
+        projects?: Project[];
         conversations: Conversation[];
       };
+      const nextProjects = conversationsData.projects?.length
+        ? conversationsData.projects
+        : [createStarterProject()];
       const nextConversations = conversationsData.conversations.length
         ? conversationsData.conversations
-        : [createStarterConversation()];
+        : [createStarterConversation(nextProjects[0]?.id ?? DEFAULT_PROJECT_ID)];
+      setProjects(nextProjects);
       setConversations(nextConversations);
+      setActiveProjectId(nextProjects[0]?.id ?? DEFAULT_PROJECT_ID);
       setActiveId(nextConversations[0]?.id ?? "");
       return;
     }
 
-    const raw = window.localStorage.getItem("chat-ai-conversations");
+    const raw = window.localStorage.getItem("chat-ai-project-state");
     if (raw) {
-      const parsed = JSON.parse(raw) as Conversation[];
-      if (parsed.length) {
-        setConversations(parsed);
-        setActiveId(parsed[0].id);
+      const parsed = JSON.parse(raw) as {
+        projects?: Project[];
+        conversations?: Conversation[];
+        activeProjectId?: string;
+      };
+      if (parsed.conversations?.length) {
+        const nextProjects = parsed.projects?.length ? parsed.projects : [createStarterProject()];
+        setProjects(nextProjects);
+        setConversations(parsed.conversations);
+        setActiveProjectId(parsed.activeProjectId ?? nextProjects[0].id);
+        setActiveId(
+          parsed.conversations.find((conversation) => conversation.projectId === (parsed.activeProjectId ?? nextProjects[0].id))?.id ??
+            parsed.conversations[0].id
+        );
         return;
       }
     }
 
-    const starter = createStarterConversation();
+    const starterProject = createStarterProject();
+    const starter = createStarterConversation(starterProject.id);
+    setProjects([starterProject]);
     setConversations([starter]);
+    setActiveProjectId(starterProject.id);
     setActiveId(starter.id);
   }
 
   function updateMessages(messages: Message[]) {
+    const targetConversationId = activeConversation?.id ?? activeId;
     setConversations((current) =>
       current.map((conversation) =>
-        conversation.id === activeConversation.id
+        conversation.id === targetConversationId
           ? {
               ...conversation,
               title:
@@ -169,9 +238,10 @@ export function ChatWorkspace() {
   }
 
   function updateMessageById(messageId: string, updater: (message: Message) => Message) {
+    const targetConversationId = activeConversation?.id ?? activeId;
     setConversations((current) =>
       current.map((conversation) =>
-        conversation.id === activeConversation.id
+        conversation.id === targetConversationId
           ? {
               ...conversation,
               updatedAt: new Date().toISOString(),
@@ -219,6 +289,7 @@ export function ChatWorkspace() {
   }
 
   async function approveAgentPlan(messageId: string) {
+    if (!activeConversation) return;
     const message = activeConversation.messages.find((item) => item.id === messageId);
     if (!message?.agentPlan) return;
 
@@ -281,6 +352,10 @@ export function ChatWorkspace() {
   }
 
   async function handleSend(content: string, attachments: Attachment[]) {
+    if (!activeConversation) {
+      createConversation();
+      return;
+    }
     const storedAttachments = sanitizeAttachmentsForStorage(attachments);
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -319,6 +394,21 @@ export function ChatWorkspace() {
 
     const nextMessages = [...activeConversation.messages, userMessage, draftAssistant];
     const requestMessages: Message[] = [
+      ...(activeProject?.instructions || activeProject?.memoryItems.length
+        ? [
+            {
+              id: crypto.randomUUID(),
+              role: "system" as const,
+              content: [
+                activeProject?.instructions ? `Project instructions:\n${activeProject.instructions}` : "",
+                activeProject?.memoryItems.length ? `Project memory:\n- ${activeProject.memoryItems.join("\n- ")}` : "",
+              ]
+                .filter(Boolean)
+                .join("\n\n"),
+              createdAt: new Date().toISOString(),
+            },
+          ]
+        : []),
       ...activeConversation.messages,
       {
         ...userMessage,
@@ -404,6 +494,10 @@ export function ChatWorkspace() {
         onTabChange={setTab}
         user={user}
         searchQuery={chatSearch}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={selectProject}
+        onCreateProject={createProject}
       />
 
       <main className="main-surface flex min-h-screen flex-col overflow-hidden px-6 py-5">
@@ -496,7 +590,7 @@ export function ChatWorkspace() {
         {tab === "settings" && (
           <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4 py-4">
             <AuthPanel user={user} onAuthChange={refreshSession} />
-            <SettingsPanel />
+            <SettingsPanel project={activeProject} onUpdateProject={updateProject} />
           </div>
         )}
         {tab === "status" && <StatusPanel />}
