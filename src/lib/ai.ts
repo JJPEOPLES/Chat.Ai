@@ -1,5 +1,5 @@
 import { env } from "./env";
-import { tools } from "@/tools";
+import { visibleTools } from "@/tools";
 import type { Attachment, Message, ToolResult } from "./types";
 
 type OpenAiChunk = {
@@ -21,17 +21,8 @@ function buildAttachmentContext(attachments: Attachment[]) {
 }
 
 function buildCapabilityPrompt() {
-  const availableTools = tools
-    .map((tool) => {
-      const availability =
-        tool.status === "available"
-          ? "ready now"
-          : tool.status === "optional"
-            ? `optional (${tool.env?.join(", ") ?? "env required"})`
-            : "disabled";
-
-      return `- ${tool.label}: ${tool.description} [${availability}]`;
-    })
+  const availableTools = visibleTools
+    .map((tool) => `- ${tool.label}: ${tool.description} [ready now]`)
     .join("\n");
 
   return [
@@ -53,9 +44,8 @@ function buildCapabilityPrompt() {
     "Tool routing behavior:",
     "- Automatically use the best matching tool when the user asks for live or domain-specific information.",
     "- If a tool result is present, trust it over prior assumptions and clearly use it in the answer.",
-    "- If a requested tool is optional and not configured, say that it is currently unavailable and continue with the best built-in help you can provide.",
     "- Do not claim to have used a tool unless a tool result was actually supplied.",
-    "- Do not lead with disabled or optional tool limitations for ordinary user questions unless the user asked about integrations, tool status, or live external data.",
+    "- Do not mention disabled, unavailable, or paid-only tools unless the user explicitly asks about tool status or integrations.",
     "- If no live tool was actually used, answer naturally from your built-in reasoning and only mention tool availability when it materially affects the answer.",
     "- When users ask about API setup, provider onboarding, or browser automation, explain that you can inspect sites and propose approval-first actions.",
     "Available tools and integrations:",

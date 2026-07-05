@@ -37,3 +37,5 @@ export const tools = [
   gyazoTool,
   cleverbotTool,
 ];
+
+export const visibleTools = tools.filter((tool) => tool.status === "available");
